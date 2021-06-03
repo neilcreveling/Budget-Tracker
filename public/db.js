@@ -1,5 +1,4 @@
 let db;
-let budgetVersion;
 
 // Create a new db request for a "budget" database.
 const request = indexedDB.open('BudgetDB', 1);
@@ -19,72 +18,61 @@ request.onerror = function (e) {
   console.log(`Woops! ${e.target.errorCode}`);
 };
 
-//checks database
-function checkDatabase() {
-  console.log('check db invoked');
-
-  // Open a transaction on your BudgetStore db
-  let transaction = db.transaction(['BudgetStore'], 'readwrite');
-
-  // access your BudgetStore object
-  const store = transaction.objectStore('BudgetStore');
-
-  // Get all records from store and set to a variable
-  const getAll = store.getAll();
-
-  // If the request was successful
-  getAll.onsuccess = function () {
-    // If there are items in the store, we need to bulk add them when we are back online
-    if (getAll.result.length > 0) {
-      fetch('/api/transaction/bulk', {
-        method: 'POST',
-        body: JSON.stringify(getAll.result),
-        headers: {
-          Accept: 'application/json, text/plain, */*',
-          'Content-Type': 'application/json',
-        },
-      })
-        .then((response) => response.json())
-        .then((res) => {
-          // If our returned response is not empty
-          if (res.length !== 0) {
-            // Open another transaction to BudgetStore with the ability to read and write
-            transaction = db.transaction(['BudgetStore'], 'readwrite');
-
-            // Assign the current store to a variable
-            const currentStore = transaction.objectStore('BudgetStore');
-
-            // Clear existing entries because our bulk add was successful
-            currentStore.clear();
-            console.log('Clearing store 🧹');
-          }
-        });
-    }
-  };
-}
-
+// onsuccess request
 request.onsuccess = function (e) {
-  console.log('success');
-  db = e.target.result;
-
-  // Check if app is online before reading from db
-  if (navigator.onLine) {
-    console.log('Backend online! 🗄️');
-    checkDatabase();
-  }
+    console.log('Success Event', e);
+    db = e.target.result;
+        let oldVersion = e.oldVersion;
+        let newVersion = e.newVersion || db.version;
+        if (!oldVersion) {
+            console.log(`DB currently running on version ${db.version} - no updates at this time`);
+        } else {
+            console.log(`DB updated from version ${oldVersion} to ${newVersion}`);
+        }
+    if (navigator.onLine) {
+        checkDatabase();
+    }
 };
 
-const saveRecord = (record) => {
-  console.log('Save record invoked');
-  // Create a transaction on the BudgetStore db with readwrite access
-  const transaction = db.transaction(['BudgetStore'], 'readwrite');
-
-  // Access your BudgetStore object store
-  const store = transaction.objectStore('BudgetStore');
-
-  // Add record to your store with add method.
-  store.add(record);
+// save records
+function saveRecord(record) {
+    console.log('saving record...');
+    console.log(record);
+    const transaction = db.transaction([BudgetStore], 'readwrite');
+    const offLineStore = transaction.objectStore('BudgetStore');
+    offLineStore.add(record);
 };
 
-// Listen for app coming back online
+//check database
+function checkDatabase() {
+    console.log('check db invoked');
+    let transaction = db.transaction(['BudgetStore'], 'readwrite');
+    const store = transaction.objectStore('BudgetStore');
+    const getAll = store.getAll();
+
+    //if successful
+    getAll.onsuccess = function () {
+        if (getAll.result.length > 0) {
+            fetch('/api/transaction/bulk', {
+            method: 'POST',
+            body: JSON.stringify(getAll.result),
+            headers: {
+                Accept: 'application/json, text/plain, */*',
+                'Content-Type': 'application/json',
+            },
+        })
+            .then((response) => response.json())
+            .then((res) => {
+                if (res.length !== 0) {
+                    transaction = db.transaction(['BudgetStore'], 'readwrite');
+                    const updatedStore = transaction.objectStore('BudgetStore');   
+                    updatedStore.clear();
+                    console.log('clearing store...');
+                }
+            });
+        }
+    };
+};
+
+//listen for app coming back online
 window.addEventListener('online', checkDatabase);
