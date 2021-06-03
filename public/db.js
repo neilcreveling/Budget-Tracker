@@ -38,7 +38,7 @@ request.onsuccess = function (e) {
 function saveRecord(record) {
     console.log('saving record...');
     console.log(record);
-    const transaction = db.transaction([BudgetStore], 'readwrite');
+    const transaction = db.transaction(['BudgetStore'], 'readwrite');
     const offLineStore = transaction.objectStore('BudgetStore');
     offLineStore.add(record);
 };
