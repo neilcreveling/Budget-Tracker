@@ -5,7 +5,6 @@ const request = indexedDB.open('BudgetDB', 1);
 
 // upgrade request
 request.onupgradeneeded = function (e) {
-  console.log('Upgrade needed in IndexDB');
 
   db = e.target.result;
 
@@ -15,12 +14,11 @@ request.onupgradeneeded = function (e) {
 };
 
 request.onerror = function (e) {
-  console.log(`Woops! ${e.target.errorCode}`);
+  console.log(`Error: ${e.target.errorCode}`);
 };
 
 // onsuccess request
 request.onsuccess = function (e) {
-    console.log('Success Event', e);
     db = e.target.result;
         let oldVersion = e.oldVersion;
         let newVersion = e.newVersion || db.version;
@@ -36,8 +34,6 @@ request.onsuccess = function (e) {
 
 // save records
 function saveRecord(record) {
-    console.log('saving record...');
-    console.log(record);
     const transaction = db.transaction(['BudgetStore'], 'readwrite');
     const offLineStore = transaction.objectStore('BudgetStore');
     offLineStore.add(record);
@@ -45,7 +41,6 @@ function saveRecord(record) {
 
 //check database
 function checkDatabase() {
-    console.log('check db invoked');
     let transaction = db.transaction(['BudgetStore'], 'readwrite');
     const store = transaction.objectStore('BudgetStore');
     const getAll = store.getAll();
@@ -67,7 +62,6 @@ function checkDatabase() {
                     transaction = db.transaction(['BudgetStore'], 'readwrite');
                     const updatedStore = transaction.objectStore('BudgetStore');   
                     updatedStore.clear();
-                    console.log('clearing store...');
                 }
             });
         }
